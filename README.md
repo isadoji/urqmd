@@ -70,8 +70,9 @@ urqmd/
 │   ├── run_urqmd.sh           # runs one UrQMD job (ftn* env vars)
 │   └── run_parallel.sh        # launches N_JOBS in parallel
 ├── analysis/
-│   ├── read_f14.py            # parser for .f14 output (19-column UrQMD 3.4 format)
-│   └── plot_observables.py    # pT, eta, phi histograms via matplotlib
+│   ├── read_f14.py            # parser for .f14 output; iter_events/iter_all generators
+│   ├── plot_observables.py    # pT, eta, phi histograms via matplotlib
+│   └── build_dataset.py       # HDF5 feature builder for ML (constant RAM, any scale)
 ├── patches/
 │   └── Linux.mk.patch         # gfortran >= 10 fix for urqmd-3.4/mk/Linux.mk
 └── urqmd-3.4/                 # NOT in git — extract tar and apply patch
@@ -88,8 +89,8 @@ urqmd/
 ## Workflow
 
 ```
-config.sh  ->  run_parallel.sh  ->  output/*/urqmd.f14  ->  plot_observables.py
- (edit)         (generate + run N jobs)  (final state)        (pT, eta, phi)
+config.sh  ->  run_parallel.sh  ->  output/*/urqmd.f14  ->  plot_observables.py   (plots)
+ (edit)         (generate + run N jobs)  (final state)    `-> build_dataset.py     (HDF5 for ML)
 ```
 
 ---
@@ -199,6 +200,70 @@ pt_Bi_11GeV_0-20_spectators_cargadas.png      # --select spectators --charged-on
 eta_Bi_11GeV_0-20.png
 phi_Bi_11GeV_0-20.png
 ```
+
+---
+
+## Step 4: Build ML dataset (HDF5)
+
+For large statistics (1M+ events) use `build_dataset.py` instead of
+`plot_observables.py`.  It reads events one at a time (constant RAM) and writes
+per-event histogram feature vectors to an HDF5 file in batches.
+
+```bash
+# Participants, charged only
+python3 analysis/build_dataset.py output/Bi_11GeV_0-20 features_0-20.h5 \
+    --select participants --charged-only
+
+# All particles, all centralities
+python3 analysis/build_dataset.py output/Bi_11GeV_MB   features_MB.h5
+
+# Spectators, limit for testing
+python3 analysis/build_dataset.py output/Bi_11GeV_0-20 features_spec.h5 \
+    --select spectators --max-events 10000
+```
+
+### HDF5 file structure
+
+| Dataset | Shape | Description |
+|---------|-------|-------------|
+| `pt_hist`  | `(N, 60)` | pT histogram per event, 0–3 GeV/c |
+| `eta_hist` | `(N, 80)` | η histogram per event, −8 to 8 |
+| `phi_hist` | `(N, 72)` | φ histogram per event, −π to π |
+| `b`        | `(N,)`    | Impact parameter [fm] per event |
+| `pt_edges` / `eta_edges` / `phi_edges` | bin edges | Bin boundaries |
+
+Total: **212 features per event** (60 + 80 + 72). Stored with gzip compression.
+
+### Load for ML training
+
+```python
+import h5py
+import numpy as np
+
+with h5py.File("features_0-20.h5", "r") as h5:
+    X = np.hstack([h5["pt_hist"][:], h5["eta_hist"][:], h5["phi_hist"][:]])
+    b = h5["b"][:]           # regression target (impact parameter)
+```
+
+Batched loading (e.g. with PyTorch / Keras) avoids loading the full file:
+
+```python
+with h5py.File("features_0-20.h5", "r") as h5:
+    for i in range(0, len(h5["b"]), 1000):
+        X_batch = np.hstack([h5["pt_hist"][i:i+1000],
+                             h5["eta_hist"][i:i+1000],
+                             h5["phi_hist"][i:i+1000]])
+```
+
+### Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--select` | `all` | `all` / `participants` (ncl > 0) / `spectators` (ncl == 0) |
+| `--charged-only` | off | Keep only charged particles |
+| `--pid N` | off | Filter by UrQMD ityp |
+| `--batch N` | 500 | Events per disk flush (tune to available RAM) |
+| `--max-events N` | all | Stop after N events |
 
 ---
 
