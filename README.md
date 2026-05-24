@@ -174,9 +174,21 @@ python3 analysis/plot_observables.py output/Bi_11GeV_0-20
 # Charged particles only
 python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --charged-only
 
+# Participants only  (ncl > 0)
+python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --select participants
+
+# Spectators only   (ncl == 0)
+python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --select spectators --charged-only
+
 # Filter by UrQMD internal particle type (ityp)
 python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --pid 101 --charged-only
 ```
+
+| `--select` | Condición | Descripción |
+|------------|-----------|-------------|
+| `all` (default) | — | Todas las partículas |
+| `participants` | `ncl > 0` | Nucleones que tuvieron al menos una colisión |
+| `spectators` | `ncl == 0` | Nucleones que no colisionaron |
 
 Plots are saved to `output/<RUN_TAG>/plots/`:
 
