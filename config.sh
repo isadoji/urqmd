@@ -24,12 +24,23 @@ ECM=11          # sqrt(sNN): NICA range 4-11, RHIC=200, LHC=5020
 # Fixed centrality range (Bi+Bi b_max~14.2 fm, b_c=14.2*sqrt(fraction)):
 #   0-10%: "0.0 4.5"   0-20%: "0.0 6.4"   20-40%: "6.4 9.0"
 #   40-60%: "9.0 11.0"   60-80%: "11.0 12.8"
-CENT_LABEL="0-20"
-IMP="0.0 6.4"
+CENT_LABEL="MB"
+IMP="-16.0"
+
+# --- UrQMD output files ---
+# Space-separated list from: f14 f15 f16 f19 f20
+#
+# f14  particle snapshot at each time step (requires cto 41 1, added automatically)
+#      With tim T T (single step) this IS the final state. Use for pT/eta/phi.
+# f15  collision-by-collision history (before/after each interaction).
+#      Useful for collision studies; NOT the final-state particle list.
+# f16  reaction cross-section table
+# f19/f20  debug / diagnostics
+OUTPUTS="f14"
 
 # --- Statistics ---
-NEV=1            # events per job
-N_JOBS=1         # independent jobs  ->  total = N_JOBS x NEV
+NEV=10            # events per job
+N_JOBS=4         # independent jobs  ->  total = N_JOBS x NEV
 N_WORKERS=4      # parallel processes (set <= available cores)
 
 SEED_BASE=12345  # base seed; job i uses SEED_BASE + i
