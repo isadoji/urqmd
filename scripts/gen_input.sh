@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
-# Genera un inputfile concreto sustituyendo los marcadores @...@ de la plantilla.
-# Uso: gen_input.sh OUTFILE SEED
+# Generates a concrete inputfile by replacing @...@ placeholders.
+# Usage: gen_input.sh OUTFILE SEED
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 source "${REPO_DIR}/config.sh"
 
-OUTFILE="${1:?Falta OUTFILE}"
-SEED="${2:?Falta SEED}"
+OUTFILE="${1:?missing OUTFILE}"
+SEED="${2:?missing SEED}"
+
+# cto 41 1 enables extended f14 output; only needed when f14 is requested.
+# In UrQMD, listing "fXX" in the input SUPPRESSES that unit (bf flag logic).
+# Output is controlled exclusively via ftn* env vars in run_urqmd.sh.
+if echo "${OUTPUTS}" | grep -qw "f14"; then
+    CTO41="cto 41 1"
+else
+    CTO41=""
+fi
 
 sed \
     -e "s/@PRO_A@/${PRO_A}/g" \
@@ -20,4 +29,5 @@ sed \
     -e "s/@TIM_TOTAL@/${TIM_TOTAL}/g" \
     -e "s/@TIM_STEP@/${TIM_STEP}/g" \
     -e "s/@SEED@/${SEED}/g" \
+    -e "s/@CTO41@/${CTO41}/g" \
     "${REPO_DIR}/input/template.inp" > "${OUTFILE}"

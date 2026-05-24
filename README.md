@@ -188,10 +188,21 @@ phi_Bi_11GeV_0-20.png
 
 ---
 
-## UrQMD output format (.f14)
+## UrQMD output files
 
-With `tim 200 200` the `.f14` file contains a single snapshot at t = 200 fm/c
-(equivalent to the final state). Each particle line has 19 columns:
+Output is controlled by `OUTPUTS` in `config.sh`.
+In UrQMD, listing `fXX` in the input file **suppresses** that unit (`bf` flag logic);
+output is enabled by exporting the corresponding `ftnXX` environment variable.
+`gen_input.sh` and `run_urqmd.sh` handle this automatically based on `OUTPUTS`.
+
+| File | Content | Use case |
+|------|---------|----------|
+| `f14` | Particle snapshot at each time step (requires `cto 41 1`). With `tim T T` this is the final state. | **pT / eta / phi** |
+| `f15` | Collision-by-collision history (before and after each interaction). | Collision studies |
+| `f16` | Reaction cross-section table. | Cross-section checks |
+| `f19/f20` | Debug and diagnostics. | Debugging |
+
+### f14 format (19 columns per particle line)
 
 ```
 t  X  Y  Z  E  Px  Py  Pz  m  ityp  iso  chg  lcl#  ncl  hist  frezeT  frezeX  step  counter
@@ -221,7 +232,7 @@ phi = atan2(Py, Px)
 | `tim T dt`   | total time and step [fm/c]         | `tim 200 200` |
 | `eos 0`      | hadronic equation of state         | —             |
 | `rsd S`      | random seed                        | `rsd 12345`   |
-| `cto 41 1`   | extended output (forces f14 write) | —             |
+| `cto 41 1`   | extended f14 output (auto-added when f14 is in OUTPUTS) | —  |
 
 ---
 
