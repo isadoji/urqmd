@@ -6,6 +6,8 @@ Uso:
     python3 analysis/plot_observables.py output/Bi_11GeV_0-20
     python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --charged-only
     python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --pid 101 --charged-only
+    python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --select participants
+    python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --select spectators --charged-only
 """
 
 import argparse
@@ -21,11 +23,22 @@ sys.path.insert(0, str(Path(__file__).parent))
 from read_f14 import read_all
 
 
-def collect_arrays(events, charged_only=False, pid=None):
-    """Concatena pT, eta, phi de todos los eventos aplicando filtros."""
+def collect_arrays(events, charged_only=False, pid=None, select="all"):
+    """
+    Concatena pT, eta, phi de todos los eventos aplicando filtros.
+
+    select : "all" | "participants" | "spectators"
+        participants -> ncl > 0  (nucleones que colisionaron al menos una vez)
+        spectators   -> ncl == 0 (nucleones que no colisionaron)
+        all          -> sin filtro por ncl
+    """
     pT_list, eta_list, phi_list = [], [], []
     for ev in events:
         mask = np.ones(len(ev["pT"]), dtype=bool)
+        if select == "participants":
+            mask &= (ev["ncl"] > 0)
+        elif select == "spectators":
+            mask &= (ev["ncl"] == 0)
         if charged_only:
             mask &= (ev["chg"] != 0)
         if pid is not None:
@@ -91,6 +104,10 @@ def main():
                         help="Solo partículas cargadas")
     parser.add_argument("--pid", type=int, default=None,
                         help="Filtrar por ityp (ID interno de UrQMD)")
+    parser.add_argument("--select", choices=["all", "participants", "spectators"],
+                        default="all",
+                        help="all: todas las partículas (default); "
+                             "participants: ncl>0; spectators: ncl==0")
     parser.add_argument("--max-events", type=int, default=None,
                         help="Límite de eventos a leer")
     args = parser.parse_args()
@@ -100,6 +117,8 @@ def main():
         sys.exit(f"ERROR: no existe {run_dir}")
 
     tag = run_dir.name
+    if args.select != "all":
+        tag += f"_{args.select}"
     if args.charged_only:
         tag += "_cargadas"
     if args.pid is not None:
@@ -115,7 +134,8 @@ def main():
 
     pT, eta, phi = collect_arrays(events,
                                   charged_only=args.charged_only,
-                                  pid=args.pid)
+                                  pid=args.pid,
+                                  select=args.select)
     n_ev = len(events)
     n_part = len(pT)
     print(f"Eventos: {n_ev}   Partículas (post-filtro): {n_part}")
