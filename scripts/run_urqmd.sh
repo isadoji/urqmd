@@ -19,7 +19,10 @@ fi
 mkdir -p "${WORKDIR}"
 WORKDIR="$(readlink -f "${WORKDIR}")"
 
-cp "${INPUTFILE}" "${WORKDIR}/inputfile"
+TARGET="${WORKDIR}/inputfile"
+if [[ "$(readlink -f "${INPUTFILE}")" != "$(readlink -f "${TARGET}")" ]]; then
+    cp "${INPUTFILE}" "${TARGET}"
+fi
 
 export ftn09="${WORKDIR}/inputfile"
 export ftn13="${WORKDIR}/urqmd.f13"

@@ -38,10 +38,10 @@ else
     running=0
     for i in $(seq 0 $(( N_JOBS - 1 ))); do
         _run_job "$i" &
-        (( running++ ))
+        running=$(( running + 1 ))
         if (( running >= N_WORKERS )); then
             wait -n 2>/dev/null || wait
-            (( running-- ))
+            running=$(( running - 1 ))
         fi
     done
     wait
