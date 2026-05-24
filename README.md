@@ -1,173 +1,163 @@
-# Observables en NICA — UrQMD local con paralelismo
+# UrQMD — event generator for heavy-ion collisions at NICA energies
 
-## Instalación de UrQMD
+Generates Bi+Bi events at 11 GeV with UrQMD 3.4 and computes
+observables (pT, eta, phi) using local parallel processing.
+The repository is self-contained: clone it, compile, and run.
+
+---
+
+## Build UrQMD
 
 ```bash
-cd /home/isadoji/github/urqmd
+git clone <this-repo>
+cd urqmd
 
-# 1. Extraer el código fuente
-tar xf urqmd-3.4.tar          # crea urqmd-3.4/
+# 1. Extract source
+tar xf urqmd-3.4.tar          # creates urqmd-3.4/
 
-# 2. Compilar (modo normal, para Bi+Bi y Au+Au)
+# 2. Compile (normal mode — Bi+Bi, Au+Au)
 cd urqmd-3.4
 make
-# → genera urqmd-3.4/urqmd.x86_64
+# -> urqmd-3.4/urqmd.x86_64
 
-# 3. Compilar modo LHC (Pb+Pb a energías de LHC, nmax=100000)
+# 3. Compile LHC mode (Pb+Pb at LHC energies, nmax=100000)
 make lhc
-# → genera urqmd-3.4/urqmd.x86_64.lhc
+# -> urqmd-3.4/urqmd.x86_64.lhc
+
+cd ..
 ```
 
-### Cambios aplicados a `urqmd-3.4/mk/Linux.mk`
+`config.sh` automatically picks up `urqmd-3.4/urqmd.x86_64` relative
+to the repository root — no path editing required after cloning.
 
-El `GNUmakefile` original no compila con gfortran moderno. Se modificó
-`mk/Linux.mk` para agregar los flags necesarios:
+### Changes applied to `urqmd-3.4/mk/Linux.mk`
+
+The original `GNUmakefile` does not compile with gfortran >= 10.
+`mk/Linux.mk` was modified to add the required flags:
 
 ```makefile
 FC = gfortran
 LD = $(FC)
 
-FFLAGS = -O3 -mcmodel=medium -std=legacy -fallow-argument-mismatch -ffixed-line-length-none
+FFLAGS  = -O3 -mcmodel=medium -std=legacy -fallow-argument-mismatch -ffixed-line-length-none
 LDFLAGS = -O3 -mcmodel=medium
 ```
 
-| Flag | Motivo |
+| Flag | Reason |
 |------|--------|
-| `-std=legacy` | Permite extensiones Fortran obsoletas usadas en UrQMD |
-| `-fallow-argument-mismatch` | Suprime errores de tipo en llamadas mixtas entero/real |
-| `-ffixed-line-length-none` | Permite líneas de código Fortran de longitud arbitraria |
-
-Los binarios generados se usan automáticamente — `config.sh` apunta a
-`urqmd-3.4/` dentro del repositorio (`URQMD_DIR="${SCRIPT_DIR}/urqmd-3.4"`).
+| `-std=legacy` | Allows obsolete Fortran extensions used in UrQMD |
+| `-fallow-argument-mismatch` | Suppresses type-mismatch errors in mixed integer/real calls |
+| `-ffixed-line-length-none` | Allows fixed-form Fortran lines of arbitrary length |
 
 ---
 
-Generación de eventos Bi+Bi a 11 GeV con UrQMD y cálculo de observables
-(pT, η, φ) usando procesamiento paralelo local.
-
----
-
-## Rutas locales
-
-| Recurso | Ruta |
-|---------|------|
-| Binario UrQMD (normal) | `/home/isadoji/Software/UrQMD/urqmd-3.4-lhc/urqmd.x86_64` |
-| Binario UrQMD (LHC) | `/home/isadoji/Software/UrQMD/urqmd-3.4-lhc/urqmd.x86_64.lhc` |
-| Runs de referencia (Bi) | `/home/isadoji/Software/UrQMD/urqmd_runs/Bi9MB/` |
-| Scripts de referencia | `/home/isadoji/github/nica/Bfield/` |
-
----
-
-## Sistemas y centralidades
-
-| Sistema | √sNN | Pro (A, Z) | Tar (A, Z) | Modo binario |
-|---------|------|-----------|-----------|--------------|
-| Bi+Bi | 11 GeV | 209, 83 | 209, 83 | `normal` |
-| Au+Au | 200 GeV | 197, 79 | 197, 79 | `normal` |
-| Pb+Pb | 5020 GeV | 208, 82 | 208, 82 | `lhc` |
-
-**Parámetro de impacto para Bi+Bi** (`b_c = 14.2 · √(fracción)` fm):
-
-| Centralidad | IMP_MIN | IMP_MAX |
-|-------------|---------|---------|
-| 0–10% | 0.0 | 4.5 |
-| 0–20% | 0.0 | 6.4 |
-| 20–40% | 6.4 | 9.0 |
-| 40–60% | 9.0 | 11.0 |
-| 60–80% | 11.0 | 12.8 |
-
----
-
-## Estructura del repositorio
+## Repository layout
 
 ```
 urqmd/
-├── config.sh                  # <-- editar aquí: energía, especie, centralidad
+├── config.sh                  # <-- edit here: species, energy, centrality
 ├── input/
-│   └── template.inp           # plantilla con marcadores @...@
+│   └── template.inp           # UrQMD input template with @...@ placeholders
 ├── scripts/
-│   ├── gen_input.sh           # genera inputfile concreto (sustituye @...@)
-│   ├── run_urqmd.sh           # corre un job de UrQMD
-│   └── run_parallel.sh        # lanza N_JOBS en paralelo
+│   ├── gen_input.sh           # fills template -> concrete inputfile per job
+│   ├── run_urqmd.sh           # runs one UrQMD job (ftn* env vars)
+│   └── run_parallel.sh        # launches N_JOBS in parallel
 ├── analysis/
-│   ├── read_f14.py            # lector de .f14 / .f15
-│   └── plot_observables.py    # histogramas de pT, η, φ
-└── output/                    # creado en tiempo de corrida (.gitignored)
+│   ├── read_f14.py            # parser for .f14 output (19-column UrQMD 3.4 format)
+│   └── plot_observables.py    # pT, eta, phi histograms via matplotlib
+├── urqmd-3.4/                 # Fortran source (compile with make)
+│   ├── mk/Linux.mk            # modified for gfortran >= 10
+│   └── urqmd.x86_64           # binary (generated, not tracked in git)
+└── output/                    # created at runtime (.gitignored)
     └── Bi_11GeV_0-20/
-        ├── run_0000/
-        │   ├── inputfile
-        │   ├── urqmd.f15
-        │   └── ...
-        └── run_0001/ ...
+        └── run_0000/
+            ├── inputfile
+            ├── urqmd.f14
+            └── plots/
 ```
 
 ---
 
-## Flujo de trabajo
+## Workflow
 
 ```
-1. Editar config.sh           →  especie, energía, centralidad, estadística
-2. ./scripts/run_parallel.sh  →  genera inputs y corre N_JOBS en paralelo
-3. python3 analysis/plot_observables.py output/Bi_11GeV_0-20  →  pT, η, φ
+config.sh  ->  run_parallel.sh  ->  output/*/urqmd.f14  ->  plot_observables.py
+ (edit)         (generate + run N jobs)  (final state)        (pT, eta, phi)
 ```
 
 ---
 
-## Paso 1: Editar config.sh
-
-Variables principales:
+## Step 1: Edit config.sh
 
 ```bash
-PRO_A=209  PRO_Z=83   # proyectil: Bismuto-209
-TAR_A=209  TAR_Z=83   # blanco
-ECM=11                # √sNN [GeV]
+PRO_A=209  PRO_Z=83   # projectile: Bismuth-209
+TAR_A=209  TAR_Z=83   # target
+ECM=11                # sqrt(sNN) [GeV]
 
 CENT_LABEL="0-20"
 IMP_MIN=0.0
 IMP_MAX=6.4
 
-NEV=10        # eventos por job
-N_JOBS=4      # jobs totales  →  40 eventos
-N_WORKERS=4   # procesos paralelos (≤ núcleos disponibles)
+NEV=10        # events per job
+N_JOBS=4      # independent jobs  ->  40 events total
+N_WORKERS=4   # parallel processes (set <= available cores)
 ```
 
-Con `TIM_TOTAL=200  TIM_STEP=200` el `.f15` contiene solo el estado final
-(una instantánea, más rápido). Para evolución temporal usar `TIM_STEP=1`.
+### Supported systems
+
+| System | sqrt(sNN) | Pro (A, Z) | Tar (A, Z) | Binary mode |
+|--------|-----------|-----------|-----------|-------------|
+| Bi+Bi  | 11 GeV    | 209, 83   | 209, 83   | `normal`    |
+| Au+Au  | 200 GeV   | 197, 79   | 197, 79   | `normal`    |
+| Pb+Pb  | 5020 GeV  | 208, 82   | 208, 82   | `lhc`       |
+
+For LHC mode set `URQMD_BIN="${URQMD_DIR}/urqmd.x86_64.lhc"` in `config.sh`.
+
+### Impact parameter ranges for Bi+Bi (b_max = 14.2 fm)
+
+| Centrality | IMP_MIN | IMP_MAX |
+|------------|---------|---------|
+| 0–10%      | 0.0     | 4.5     |
+| 0–20%      | 0.0     | 6.4     |
+| 20–40%     | 6.4     | 9.0     |
+| 40–60%     | 9.0     | 11.0    |
+| 60–80%     | 11.0    | 12.8    |
+
+Formula: `b_c = 14.2 * sqrt(fraction)` fm.
 
 ---
 
-## Paso 2: Generar eventos
+## Step 2: Generate events
 
 ```bash
-cd /home/isadoji/github/urqmd
 chmod +x scripts/*.sh
 ./scripts/run_parallel.sh
 ```
 
-El script:
-1. Lee `config.sh`.
-2. Llama a `gen_input.sh` para crear un inputfile por job (semilla única).
-3. Lanza `run_urqmd.sh` en paralelo con `N_WORKERS` procesos simultáneos.
-4. Cada job escribe su salida en `output/<RUN_TAG>/run_NNNN/`.
+The script:
+1. Reads `config.sh`.
+2. Calls `gen_input.sh` to produce one inputfile per job (unique seed).
+3. Launches `run_urqmd.sh` with `N_WORKERS` simultaneous processes.
+4. Each job writes output to `output/<RUN_TAG>/run_NNNN/`.
 
-Usa GNU Parallel si está instalado; de lo contrario usa bash puro (`& + wait`).
+Uses GNU Parallel if available; falls back to plain bash (`& + wait`).
 
 ---
 
-## Paso 3: Graficar pT, η, φ
+## Step 3: Plot pT, eta, phi
 
 ```bash
-# Todas las partículas
+# All particles
 python3 analysis/plot_observables.py output/Bi_11GeV_0-20
 
-# Solo partículas cargadas
+# Charged particles only
 python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --charged-only
 
-# Filtrar por tipo de partícula (ityp interno de UrQMD)
+# Filter by UrQMD internal particle type (ityp)
 python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --pid 101 --charged-only
 ```
 
-Los plots se guardan en `output/<RUN_TAG>/plots/`:
+Plots are saved to `output/<RUN_TAG>/plots/`:
 
 ```
 pt_Bi_11GeV_0-20.png
@@ -177,60 +167,50 @@ phi_Bi_11GeV_0-20.png
 
 ---
 
-## Formato del archivo de salida .f14 / .f15
+## UrQMD output format (.f14)
 
-Cabecera de evento:
+With `tim 200 200` the `.f14` file contains a single snapshot at t = 200 fm/c
+(equivalent to the final state). Each particle line has 19 columns:
+
 ```
-UQMD version ...
-projectile: (mass, char) A Z   target: (mass, char) A Z
-impact_parameter_real/min/max(fm): b bmin bmax  total_cross_section: σ
-event# N  random seed: S  total_time: T  Delta(t): dt
-...
-pvec: r0 rx ry rz p0 px py pz m ityp 2i3 chg lcl# ncl or
-     npart  nstep
+t  X  Y  Z  E  Px  Py  Pz  m  ityp  iso  chg  lcl#  ncl  hist  frezeT  frezeX  step  counter
 ```
 
-Línea de partícula (23 columnas):
-```
-t  X  Y  Z  E  Px  Py  Pz  m  ityp  2i3  chg  lcl#  ncl  or
-frezeT  frezeX  frezeY  frezeZ  frezeE  frezePx  frezePy  frezePz  counter
-```
+Observables computed from momenta:
 
-Observables calculados desde los momentos:
 ```
-pT  = sqrt(Px² + Py²)
-P   = sqrt(Px² + Py² + Pz²)
-η   = 0.5 · ln((P + Pz) / (P − Pz))
-φ   = atan2(Py, Px)
+pT  = sqrt(Px^2 + Py^2)
+P   = sqrt(Px^2 + Py^2 + Pz^2)
+eta = 0.5 * ln((P + Pz) / (P - Pz))
+phi = atan2(Py, Px)
 ```
 
 ---
 
-## Referencia de parámetros del input de UrQMD
+## UrQMD input reference
 
-| Parámetro | Descripción | Ejemplo |
-|-----------|-------------|---------|
-| `pro A Z` | proyectil (masa, carga) | `pro 209 83` |
-| `tar A Z` | blanco | `tar 209 83` |
-| `nev N` | eventos por corrida | `nev 10` |
-| `imp bmin bmax` | rango b [fm] | `imp 0.0 6.4` |
-| `ecm E` | √sNN [GeV] | `ecm 11` |
-| `tim T dt` | tiempo total y paso [fm/c] | `tim 200 200` |
-| `eos 0` | EOS hadrónica | — |
-| `rsd S` | semilla aleatoria | `rsd 12345` |
-| `cto 41 1` | activa string formation | — |
-| `f14` / `f15` | habilitar salidas | `f15` (estado final) |
+| Parameter    | Description                        | Example       |
+|--------------|------------------------------------|---------------|
+| `pro A Z`    | projectile (mass, charge)          | `pro 209 83`  |
+| `tar A Z`    | target                             | `tar 209 83`  |
+| `nev N`      | events per run                     | `nev 10`      |
+| `imp b1 b2`  | impact parameter range [fm]        | `imp 0.0 6.4` |
+| `ecm E`      | sqrt(sNN) [GeV]                    | `ecm 11`      |
+| `tim T dt`   | total time and step [fm/c]         | `tim 200 200` |
+| `eos 0`      | hadronic equation of state         | —             |
+| `rsd S`      | random seed                        | `rsd 12345`   |
+| `cto 41 1`   | extended output (forces f14 write) | —             |
 
 ---
 
-## Dependencias
+## Dependencies
 
-- UrQMD 3.4 — `/home/isadoji/Software/UrQMD/urqmd-3.4-lhc/`
-- Python ≥ 3.8: `numpy`, `matplotlib`
-- GNU Parallel (opcional; el script funciona sin él)
-- ROOT ≥ 6.0 (opcional, para análisis adicional con macros `.C`)
+- gfortran >= 10 (to compile UrQMD from source)
+- Python >= 3.8: `numpy`, `matplotlib`
+- GNU Parallel (optional; script works without it)
+- ROOT >= 6.0 (optional, for additional `.C` macro analysis)
 
-## Referencias
+## References
 
 - Bass et al., Prog. Part. Nucl. Phys. 41, 255 (1998)
 - Bleicher et al., J. Phys. G 25, 1859 (1999)
