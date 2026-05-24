@@ -1,7 +1,7 @@
 pro @PRO_A@ @PRO_Z@
 tar @TAR_A@ @TAR_Z@
 nev @NEV@
-imp @IMP_MIN@ @IMP_MAX@
+imp @IMP@
 ecm @ECM@
 tim @TIM_TOTAL@ @TIM_STEP@
 eos 0

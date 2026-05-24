@@ -11,7 +11,7 @@ mkdir -p "${OUTDIR}"
 
 echo "============================================="
 echo "Sistema : ${SPECIES}+${SPECIES}  sqrt(s)=${ECM} GeV"
-echo "Central.: ${CENT_LABEL}  b=[${IMP_MIN}, ${IMP_MAX}] fm"
+echo "Central.: ${CENT_LABEL}  imp=${IMP}"
 echo "Jobs    : ${N_JOBS} × ${NEV} ev = $((N_JOBS * NEV)) eventos totales"
 echo "Workers : ${N_WORKERS} paralelos"
 echo "Salida  : ${OUTDIR}"

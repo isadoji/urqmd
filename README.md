@@ -120,15 +120,29 @@ N_WORKERS=4   # parallel processes (set <= available cores)
 
 For LHC mode set `URQMD_BIN="${URQMD_DIR}/urqmd.x86_64.lhc"` in `config.sh`.
 
-### Impact parameter ranges for Bi+Bi (b_max = 14.2 fm)
+### Impact parameter for Bi+Bi (b_max = 14.2 fm)
 
-| Centrality | IMP_MIN | IMP_MAX |
-|------------|---------|---------|
-| 0–10%      | 0.0     | 4.5     |
-| 0–20%      | 0.0     | 6.4     |
-| 20–40%     | 6.4     | 9.0     |
-| 40–60%     | 9.0     | 11.0    |
-| 60–80%     | 11.0    | 12.8    |
+Set `IMP` in `config.sh` — single negative value for minimum bias,
+two positive values for a fixed centrality range:
+
+```bash
+# Minimum bias: b sampled from 0 to 16 fm weighted by geometry
+CENT_LABEL="MB"  ;  IMP="-16.0"
+
+# Fixed centrality range [fm]
+CENT_LABEL="0-20"  ;  IMP="0.0 6.4"
+```
+
+**Fixed centrality ranges for Bi+Bi** (b_max = 14.2 fm):
+
+| Centrality | IMP            |
+|------------|----------------|
+| MB         | `-16.0`        |
+| 0–10%      | `0.0 4.5`      |
+| 0–20%      | `0.0 6.4`      |
+| 20–40%     | `6.4 9.0`      |
+| 40–60%     | `9.0 11.0`     |
+| 60–80%     | `11.0 12.8`    |
 
 Formula: `b_c = 14.2 * sqrt(fraction)` fm.
 
@@ -201,7 +215,8 @@ phi = atan2(Py, Px)
 | `pro A Z`    | projectile (mass, charge)          | `pro 209 83`  |
 | `tar A Z`    | target                             | `tar 209 83`  |
 | `nev N`      | events per run                     | `nev 10`      |
-| `imp b1 b2`  | impact parameter range [fm]        | `imp 0.0 6.4` |
+| `imp -b`     | minimum bias (b ~ 0 to b, weighted)| `imp -16.0`   |
+| `imp b1 b2`  | fixed centrality range [fm]        | `imp 0.0 6.4` |
 | `ecm E`      | sqrt(sNN) [GeV]                    | `ecm 11`      |
 | `tim T dt`   | total time and step [fm/c]         | `tim 200 200` |
 | `eos 0`      | hadronic equation of state         | —             |
