@@ -1,0 +1,18 @@
+pro @PRO_A@ @PRO_Z@
+tar @TAR_A@ @TAR_Z@
+nev @NEV@
+imp @IMP_MIN@ @IMP_MAX@
+ecm @ECM@
+tim @TIM_TOTAL@ @TIM_STEP@
+eos 0
+rsd @SEED@
+cto 41 1
+
+#f13
+#f14
+f15
+f16
+f19
+f20
+
+xxx
