@@ -10,12 +10,6 @@ plots/
 __pycache__/
 *.pyc
 
-# UrQMD: tar y archivos generados por compilación
+# UrQMD source tree and build artifacts (use patches/Linux.mk.patch to build)
 urqmd-3.4.tar
-urqmd-3.4/obj_*/
-urqmd-3.4/tables.dat
-urqmd-3.4/urqmd.x86_64
-urqmd-3.4/urqmd.x86_64.lhc
-urqmd-3.4/inputfile
-urqmd-3.4/terms.mod
-urqmd-3.4/maketables
+urqmd-3.4/

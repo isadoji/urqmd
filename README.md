@@ -8,19 +8,30 @@ The repository is self-contained: clone it, compile, and run.
 
 ## Build UrQMD
 
+The UrQMD 3.4 source tar (204 MB) is not stored in this repository.
+Download it from the official site and place it at the repo root:
+
+```
+http://urqmd.org/download/urqmd-3.4.tar
+```
+
+Then build:
+
 ```bash
-git clone <this-repo>
+git clone https://github.com/isadoji/urqmd.git
 cd urqmd
 
-# 1. Extract source
+# 1. Place urqmd-3.4.tar here, then extract
 tar xf urqmd-3.4.tar          # creates urqmd-3.4/
 
-# 2. Compile (normal mode — Bi+Bi, Au+Au)
-cd urqmd-3.4
-make
+# 2. Apply the gfortran patch (fixes compilation with gfortran >= 10)
+patch urqmd-3.4/mk/Linux.mk patches/Linux.mk.patch
+
+# 3. Compile (normal mode — Bi+Bi, Au+Au)
+cd urqmd-3.4 && make
 # -> urqmd-3.4/urqmd.x86_64
 
-# 3. Compile LHC mode (Pb+Pb at LHC energies, nmax=100000)
+# 4. Compile LHC mode (Pb+Pb at LHC energies, nmax=100000)
 make lhc
 # -> urqmd-3.4/urqmd.x86_64.lhc
 
@@ -30,17 +41,13 @@ cd ..
 `config.sh` automatically picks up `urqmd-3.4/urqmd.x86_64` relative
 to the repository root — no path editing required after cloning.
 
-### Changes applied to `urqmd-3.4/mk/Linux.mk`
+### Patch: `patches/Linux.mk.patch`
 
 The original `GNUmakefile` does not compile with gfortran >= 10.
-`mk/Linux.mk` was modified to add the required flags:
+`patches/Linux.mk.patch` adds the required flags to `mk/Linux.mk`:
 
 ```makefile
-FC = gfortran
-LD = $(FC)
-
-FFLAGS  = -O3 -mcmodel=medium -std=legacy -fallow-argument-mismatch -ffixed-line-length-none
-LDFLAGS = -O3 -mcmodel=medium
+FFLAGS = -O3 -mcmodel=medium -std=legacy -fallow-argument-mismatch -ffixed-line-length-none
 ```
 
 | Flag | Reason |
@@ -65,9 +72,9 @@ urqmd/
 ├── analysis/
 │   ├── read_f14.py            # parser for .f14 output (19-column UrQMD 3.4 format)
 │   └── plot_observables.py    # pT, eta, phi histograms via matplotlib
-├── urqmd-3.4/                 # Fortran source (compile with make)
-│   ├── mk/Linux.mk            # modified for gfortran >= 10
-│   └── urqmd.x86_64           # binary (generated, not tracked in git)
+├── patches/
+│   └── Linux.mk.patch         # gfortran >= 10 fix for urqmd-3.4/mk/Linux.mk
+└── urqmd-3.4/                 # NOT in git — extract tar and apply patch
 └── output/                    # created at runtime (.gitignored)
     └── Bi_11GeV_0-20/
         └── run_0000/
