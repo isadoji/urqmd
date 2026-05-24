@@ -31,3 +31,11 @@ sed \
     -e "s/@SEED@/${SEED}/g" \
     -e "s/@CTO41@/${CTO41}/g" \
     "${REPO_DIR}/input/template.inp" > "${OUTFILE}"
+
+# Suppress unrequested output units via UrQMD's inverted bf-flag logic:
+# listing fXX in the input sets bfXX=.true. which causes UrQMD to skip writing that unit.
+for unit in f14 f15 f16 f19 f20; do
+    if ! echo "${OUTPUTS}" | grep -qw "${unit}"; then
+        sed -i "/^xxx\$/i${unit}" "${OUTFILE}"
+    fi
+done
