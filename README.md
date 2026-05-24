@@ -72,7 +72,9 @@ urqmd/
 ├── analysis/
 │   ├── read_f14.py            # parser for .f14 output; iter_events/iter_all generators
 │   ├── plot_observables.py    # pT, eta, phi histograms via matplotlib
-│   └── build_dataset.py       # HDF5 feature builder for ML (constant RAM, any scale)
+│   ├── build_dataset.py       # HDF5 feature builder for ML (constant RAM, any scale)
+│   ├── urqmd2root.C           # converts .f14 → ROOT TTree (compatible with CalcBfield)
+│   └── plot_observables.C     # pT, eta, phi histograms via ROOT
 ├── patches/
 │   └── Linux.mk.patch         # gfortran >= 10 fix for urqmd-3.4/mk/Linux.mk
 └── urqmd-3.4/                 # NOT in git — extract tar and apply patch
@@ -89,8 +91,10 @@ urqmd/
 ## Workflow
 
 ```
-config.sh  ->  run_parallel.sh  ->  output/*/urqmd.f14  ->  plot_observables.py   (plots)
- (edit)         (generate + run N jobs)  (final state)    `-> build_dataset.py     (HDF5 for ML)
+config.sh  ->  run_parallel.sh  ->  output/*/urqmd.f14  ->  plot_observables.py   (Python plots)
+ (edit)         (generate + run N jobs)  (final state)    |-> urqmd2root.C         (ROOT TTree)
+                                                          |     -> plot_observables.C  (ROOT plots)
+                                                          `-> build_dataset.py     (HDF5 for ML)
 ```
 
 ---
@@ -203,7 +207,54 @@ phi_Bi_11GeV_0-20.png
 
 ---
 
-## Step 4: Build ML dataset (HDF5)
+## Step 4: ROOT TTree conversion + plots
+
+Convert all `.f14` files in a run directory to a single ROOT TTree (one entry per event):
+
+```bash
+# Requires ROOT >= 6 (use conda root_env)
+root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_MB")'
+# -> Bi_11GeV_MB.root  (TTree "T", compatible with CalcBfield_3cent.C)
+```
+
+### TTree branch layout
+
+| Branch | Type | Description |
+|--------|------|-------------|
+| `npart` | `Int_t` | Total particles per event |
+| `nspec` | `Int_t` | Spectators (ncl == 0) per event |
+| `b` | `Float_t` | Impact parameter [fm] |
+| `nev` | `Float_t` | Event counter |
+| `time[npart]` | `Float_t[]` | Time [fm/c] |
+| `X/Y/Z[npart]` | `Float_t[]` | Position [fm] |
+| `E/Px/Py/Pz[npart]` | `Float_t[]` | 4-momentum [GeV] |
+| `m[npart]` | `Float_t[]` | Mass [GeV] |
+| `charge[npart]` | `Float_t[]` | Electric charge |
+| `numbercoll[npart]` | `Float_t[]` | Number of collisions (ncl); 0 = spectator |
+| `ityp[npart]` | `Int_t[]` | UrQMD particle type |
+| `iso[npart]` | `Int_t[]` | Isospin projection |
+
+### Plot with ROOT
+
+```bash
+# All particles
+root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root")'
+
+# Participants, charged only
+root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","participants",true)'
+
+# Spectators, charged only
+root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","spectators",true)'
+
+# Filter by ityp
+root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","all",false,101)'
+```
+
+Saves `pt_<tag>.png`, `eta_<tag>.png`, `phi_<tag>.png` + PDF in the current directory.
+
+---
+
+## Step 5: Build ML dataset (HDF5)
 
 For large statistics (1M+ events) use `build_dataset.py` instead of
 `plot_observables.py`.  It reads events one at a time (constant RAM) and writes
