@@ -16,12 +16,14 @@ import numpy as np
 from pathlib import Path
 
 
+# UrQMD 3.4 f14 format: 19 columnas
+# r0 rx ry rz p0 px py pz m ityp 2i3 chg lcl# ncl or  frezetime frezeX step counter
 _COLS = [
     "t", "X", "Y", "Z", "E", "Px", "Py", "Pz", "m",
     "ityp", "iso", "chg", "lcl", "ncl", "hist",
-    "frezeT", "frezeX", "frezeY", "frezeZ",
-    "frezeE", "frezePx", "frezePy", "frezePz", "counter",
+    "frezeT", "frezeX", "step", "counter",
 ]
+_NCOLS_MIN = 15   # mínimo para garantizar E, Px, Py, Pz, chg, ncl
 
 
 def _derived(particles):
@@ -86,9 +88,9 @@ def read_events(filepath, max_events=None):
 
             elif in_event and line.strip() and c not in ("#", "\n"):
                 parts = line.split()
-                if len(parts) >= 23:
+                if len(parts) >= _NCOLS_MIN:
                     try:
-                        for col, val in zip(_COLS, parts[:24]):
+                        for col, val in zip(_COLS, parts[:len(_COLS)]):
                             current_particles[col].append(float(val))
                     except ValueError:
                         pass
@@ -103,13 +105,13 @@ def read_events(filepath, max_events=None):
     return events
 
 
-def read_all(output_dir, pattern="*/urqmd.f1[45]", max_events=None):
+def read_all(output_dir, pattern="*/urqmd.f14", max_events=None):
     """
-    Lee todos los archivos .f14 o .f15 en output_dir y concatena los eventos.
+    Lee todos los archivos .f14 en output_dir y concatena los eventos.
+    Usa f14 porque con cto 41 1 ese archivo siempre se genera;
+    con tim T T (un solo snapshot) equivale al estado final.
     """
     files = sorted(Path(output_dir).glob(pattern))
-    if not files:
-        files = sorted(Path(output_dir).glob("*/urqmd.f15"))
     if not files:
         files = sorted(Path(output_dir).glob("*/urqmd.f14"))
     if not files:
