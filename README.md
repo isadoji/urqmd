@@ -1,5 +1,47 @@
 # Observables en NICA — UrQMD local con paralelismo
 
+## Instalación de UrQMD
+
+```bash
+cd /home/isadoji/github/urqmd
+
+# 1. Extraer el código fuente
+tar xf urqmd-3.4.tar          # crea urqmd-3.4/
+
+# 2. Compilar (modo normal, para Bi+Bi y Au+Au)
+cd urqmd-3.4
+make
+# → genera urqmd-3.4/urqmd.x86_64
+
+# 3. Compilar modo LHC (Pb+Pb a energías de LHC, nmax=100000)
+make lhc
+# → genera urqmd-3.4/urqmd.x86_64.lhc
+```
+
+### Cambios aplicados a `urqmd-3.4/mk/Linux.mk`
+
+El `GNUmakefile` original no compila con gfortran moderno. Se modificó
+`mk/Linux.mk` para agregar los flags necesarios:
+
+```makefile
+FC = gfortran
+LD = $(FC)
+
+FFLAGS = -O3 -mcmodel=medium -std=legacy -fallow-argument-mismatch -ffixed-line-length-none
+LDFLAGS = -O3 -mcmodel=medium
+```
+
+| Flag | Motivo |
+|------|--------|
+| `-std=legacy` | Permite extensiones Fortran obsoletas usadas en UrQMD |
+| `-fallow-argument-mismatch` | Suprime errores de tipo en llamadas mixtas entero/real |
+| `-ffixed-line-length-none` | Permite líneas de código Fortran de longitud arbitraria |
+
+Los binarios generados se usan automáticamente — `config.sh` apunta a
+`urqmd-3.4/` dentro del repositorio (`URQMD_DIR="${SCRIPT_DIR}/urqmd-3.4"`).
+
+---
+
 Generación de eventos Bi+Bi a 11 GeV con UrQMD y cálculo de observables
 (pT, η, φ) usando procesamiento paralelo local.
 
