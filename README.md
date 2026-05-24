@@ -234,9 +234,10 @@ with `CalcBfield_3cent.C` and any standard HEP analysis macro.
 ```bash
 # conda root_env (ROOT >= 6)
 root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_MB")'
-# -> Bi_11GeV_MB.root  (TTree "T")
+# -> output/Bi_11GeV_MB/Bi_11GeV_MB.root  (TTree "T")
 
-root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_0-20","Bi_0-20.root")'
+# Custom output path
+root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_0-20","output/Bi_11GeV_0-20/Bi_0-20.root")'
 ```
 
 **TTree "T" branch layout**
@@ -260,16 +261,16 @@ root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_0-20","Bi_0-20.root")'
 
 ```bash
 # All particles
-root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root")'
+root -l -b -q 'analysis/plot_observables.C("output/Bi_11GeV_MB/Bi_11GeV_MB.root")'
 
 # Participants, charged only
-root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","participants",true)'
+root -l -b -q 'analysis/plot_observables.C("output/Bi_11GeV_MB/Bi_11GeV_MB.root","participants",true)'
 
 # Spectators, charged only
-root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","spectators",true)'
+root -l -b -q 'analysis/plot_observables.C("output/Bi_11GeV_MB/Bi_11GeV_MB.root","spectators",true)'
 
 # Filter by ityp
-root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","all",false,101)'
+root -l -b -q 'analysis/plot_observables.C("output/Bi_11GeV_MB/Bi_11GeV_MB.root","all",false,101)'
 ```
 
 Saves `pt_<tag>.png/pdf`, `eta_<tag>.png/pdf`, `phi_<tag>.png/pdf` in the current directory.

@@ -79,8 +79,8 @@ void urqmd2root(TString run_dir = "output/Bi_11GeV_MB", TString outfile = "")
         TString base = run_dir;
         while(base.EndsWith("/")) base.Remove(base.Length()-1, 1);
         Int_t sl = base.Last('/');
-        if(sl >= 0) base = base(sl+1, base.Length()-sl-1);
-        outfile = base + ".root";
+        TString tag = (sl >= 0) ? base(sl+1, base.Length()-sl-1) : base;
+        outfile = base + "/" + tag + ".root";   // output/<RUN_TAG>/<RUN_TAG>.root
     }
 
     // Buscar archivos urqmd.f14 en subdirectorios run_NNNN/
