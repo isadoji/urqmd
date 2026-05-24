@@ -27,8 +27,8 @@ IMP_MIN=0.0
 IMP_MAX=6.4
 
 # --- Estadística ---
-NEV=10           # eventos por job
-N_JOBS=4         # jobs independientes  →  total = N_JOBS × NEV
+NEV=1           # eventos por job
+N_JOBS=1         # jobs independientes  →  total = N_JOBS × NEV
 N_WORKERS=4      # procesos paralelos simultáneos (≤ núcleos disponibles)
 
 SEED_BASE=12345  # semilla base; job i usa SEED_BASE + i
@@ -42,7 +42,8 @@ TIM_STEP=200
 # --- Binario de UrQMD ---
 # Modo normal → Au, Bi (nmax=40000)
 # Modo lhc    → Pb a energías LHC (nmax=100000)
-URQMD_DIR="/home/isadoji/Software/UrQMD/urqmd-3.4-lhc"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+URQMD_DIR="${SCRIPT_DIR}/urqmd-3.4"
 URQMD_BIN="${URQMD_DIR}/urqmd.x86_64"
 # URQMD_BIN="${URQMD_DIR}/urqmd.x86_64.lhc"   # usar para Pb+Pb LHC
 
