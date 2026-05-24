@@ -15,8 +15,7 @@ sed \
     -e "s/@TAR_A@/${TAR_A}/g" \
     -e "s/@TAR_Z@/${TAR_Z}/g" \
     -e "s/@NEV@/${NEV}/g" \
-    -e "s/@IMP_MIN@/${IMP_MIN}/g" \
-    -e "s/@IMP_MAX@/${IMP_MAX}/g" \
+    -e "s/@IMP@/${IMP}/g" \
     -e "s/@ECM@/${ECM}/g" \
     -e "s/@TIM_TOTAL@/${TIM_TOTAL}/g" \
     -e "s/@TIM_STEP@/${TIM_STEP}/g" \
