@@ -170,54 +170,76 @@ Uses GNU Parallel if available; falls back to plain bash (`& + wait`).
 
 ---
 
-## Step 3: Plot pT, eta, phi
+## Step 3: Analysis
+
+Three back-ends are available. Choose based on your goal:
+
+| | Python (matplotlib) | ROOT (CERN) | HDF5 (ML) |
+|---|---|---|---|
+| **Script** | `plot_observables.py` | `urqmd2root.C` + `plot_observables.C` | `build_dataset.py` |
+| **Input** | `output/*/urqmd.f14` | `output/*/urqmd.f14` → `.root` | `output/*/urqmd.f14` |
+| **Output** | PNG histograms | PNG + PDF + ROOT TTree | HDF5 feature matrix |
+| **Best for** | Quick checks | Standard HEP analysis, CalcBfield | ML training (1M+ events) |
+| **RAM usage** | All events in memory | TTree lazy read | Constant (batch write) |
+| **Requires** | `numpy`, `matplotlib` | ROOT >= 6 (`root_env`) | `h5py` (`ml` env) |
+
+### Particle selection (all three back-ends)
+
+| `--select` / `select` | Condition | Description |
+|-----------------------|-----------|-------------|
+| `all` (default) | — | All final-state particles |
+| `participants` | `ncl > 0` | Nucleons that had at least one collision |
+| `spectators` | `ncl == 0` | Nucleons that did not collide |
+
+---
+
+### Option A — Python / matplotlib
+
+Reads `.f14` files directly. Best for quick exploratory plots.
 
 ```bash
 # All particles
 python3 analysis/plot_observables.py output/Bi_11GeV_0-20
 
-# Charged particles only
-python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --charged-only
+# Participants, charged only
+python3 analysis/plot_observables.py output/Bi_11GeV_0-20 \
+    --select participants --charged-only
 
-# Participants only  (ncl > 0)
-python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --select participants
+# Spectators, charged only
+python3 analysis/plot_observables.py output/Bi_11GeV_0-20 \
+    --select spectators --charged-only
 
-# Spectators only   (ncl == 0)
-python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --select spectators --charged-only
-
-# Filter by UrQMD internal particle type (ityp)
-python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --pid 101 --charged-only
+# Filter by UrQMD particle type (ityp)
+python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --pid 101
 ```
 
-| `--select` | Condición | Descripción |
-|------------|-----------|-------------|
-| `all` (default) | — | Todas las partículas |
-| `participants` | `ncl > 0` | Nucleones que tuvieron al menos una colisión |
-| `spectators` | `ncl == 0` | Nucleones que no colisionaron |
-
-Plots are saved to `output/<RUN_TAG>/plots/`. The filename includes the active filters:
+Plots saved to `output/<RUN_TAG>/plots/` — filename includes active filters:
 
 ```
-pt_Bi_11GeV_0-20.png                          # all particles
-pt_Bi_11GeV_0-20_participants.png             # --select participants
-pt_Bi_11GeV_0-20_spectators_cargadas.png      # --select spectators --charged-only
+pt_Bi_11GeV_0-20.png
+pt_Bi_11GeV_0-20_participants_cargadas.png
 eta_Bi_11GeV_0-20.png
 phi_Bi_11GeV_0-20.png
 ```
 
 ---
 
-## Step 4: ROOT TTree conversion + plots
+### Option B — ROOT / CERN
 
-Convert all `.f14` files in a run directory to a single ROOT TTree (one entry per event):
+Two-step: convert `.f14` to a ROOT TTree, then plot. The TTree is compatible
+with `CalcBfield_3cent.C` and any standard HEP analysis macro.
+
+**Step B-1: convert**
 
 ```bash
-# Requires ROOT >= 6 (use conda root_env)
+# conda root_env (ROOT >= 6)
 root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_MB")'
-# -> Bi_11GeV_MB.root  (TTree "T", compatible with CalcBfield_3cent.C)
+# -> Bi_11GeV_MB.root  (TTree "T")
+
+root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_0-20","Bi_0-20.root")'
 ```
 
-### TTree branch layout
+**TTree "T" branch layout**
 
 | Branch | Type | Description |
 |--------|------|-------------|
@@ -230,11 +252,11 @@ root -l -b -q 'analysis/urqmd2root.C("output/Bi_11GeV_MB")'
 | `E/Px/Py/Pz[npart]` | `Float_t[]` | 4-momentum [GeV] |
 | `m[npart]` | `Float_t[]` | Mass [GeV] |
 | `charge[npart]` | `Float_t[]` | Electric charge |
-| `numbercoll[npart]` | `Float_t[]` | Number of collisions (ncl); 0 = spectator |
+| `numbercoll[npart]` | `Float_t[]` | Collisions per nucleon; 0 = spectator |
 | `ityp[npart]` | `Int_t[]` | UrQMD particle type |
 | `iso[npart]` | `Int_t[]` | Isospin projection |
 
-### Plot with ROOT
+**Step B-2: plot**
 
 ```bash
 # All particles
@@ -250,55 +272,52 @@ root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","spectators",true)
 root -l -b -q 'analysis/plot_observables.C("Bi_11GeV_MB.root","all",false,101)'
 ```
 
-Saves `pt_<tag>.png`, `eta_<tag>.png`, `phi_<tag>.png` + PDF in the current directory.
+Saves `pt_<tag>.png/pdf`, `eta_<tag>.png/pdf`, `phi_<tag>.png/pdf` in the current directory.
 
 ---
 
-## Step 5: Build ML dataset (HDF5)
+### Option C — HDF5 for ML
 
-For large statistics (1M+ events) use `build_dataset.py` instead of
-`plot_observables.py`.  It reads events one at a time (constant RAM) and writes
-per-event histogram feature vectors to an HDF5 file in batches.
+Reads `.f14` one event at a time (constant RAM) and writes per-event histogram
+feature vectors to an HDF5 file in batches. Designed for 1M+ events.
 
 ```bash
+# conda ml env (pip install h5py)
+
 # Participants, charged only
 python3 analysis/build_dataset.py output/Bi_11GeV_0-20 features_0-20.h5 \
     --select participants --charged-only
 
-# All particles, all centralities
-python3 analysis/build_dataset.py output/Bi_11GeV_MB   features_MB.h5
+# All particles, minimum bias
+python3 analysis/build_dataset.py output/Bi_11GeV_MB features_MB.h5
 
-# Spectators, limit for testing
+# Spectators, quick test
 python3 analysis/build_dataset.py output/Bi_11GeV_0-20 features_spec.h5 \
     --select spectators --max-events 10000
 ```
 
-### HDF5 file structure
+**HDF5 file structure**
 
 | Dataset | Shape | Description |
 |---------|-------|-------------|
 | `pt_hist`  | `(N, 60)` | pT histogram per event, 0–3 GeV/c |
 | `eta_hist` | `(N, 80)` | η histogram per event, −8 to 8 |
 | `phi_hist` | `(N, 72)` | φ histogram per event, −π to π |
-| `b`        | `(N,)`    | Impact parameter [fm] per event |
-| `pt_edges` / `eta_edges` / `phi_edges` | bin edges | Bin boundaries |
+| `b`        | `(N,)`    | Impact parameter [fm] — regression target |
+| `pt_edges` / `eta_edges` / `phi_edges` | 1-D | Bin boundaries |
 
-Total: **212 features per event** (60 + 80 + 72). Stored with gzip compression.
+Total: **212 features per event** (60 + 80 + 72), gzip-compressed.
 
-### Load for ML training
+**Load for ML training**
 
 ```python
-import h5py
-import numpy as np
+import h5py, numpy as np
 
 with h5py.File("features_0-20.h5", "r") as h5:
     X = np.hstack([h5["pt_hist"][:], h5["eta_hist"][:], h5["phi_hist"][:]])
-    b = h5["b"][:]           # regression target (impact parameter)
-```
+    b = h5["b"][:]   # regression target
 
-Batched loading (e.g. with PyTorch / Keras) avoids loading the full file:
-
-```python
+# Batched loading for PyTorch / Keras (avoids loading full file)
 with h5py.File("features_0-20.h5", "r") as h5:
     for i in range(0, len(h5["b"]), 1000):
         X_batch = np.hstack([h5["pt_hist"][i:i+1000],
@@ -306,14 +325,14 @@ with h5py.File("features_0-20.h5", "r") as h5:
                              h5["phi_hist"][i:i+1000]])
 ```
 
-### Options
+**Options**
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--select` | `all` | `all` / `participants` (ncl > 0) / `spectators` (ncl == 0) |
-| `--charged-only` | off | Keep only charged particles |
+| `--select` | `all` | `all` / `participants` / `spectators` |
+| `--charged-only` | off | Charged particles only |
 | `--pid N` | off | Filter by UrQMD ityp |
-| `--batch N` | 500 | Events per disk flush (tune to available RAM) |
+| `--batch N` | 500 | Events per disk flush |
 | `--max-events N` | all | Stop after N events |
 
 ---
@@ -368,10 +387,13 @@ phi = atan2(Py, Px)
 
 ## Dependencies
 
-- gfortran >= 10 (to compile UrQMD from source)
-- Python >= 3.8: `numpy`, `matplotlib`
-- GNU Parallel (optional; script works without it)
-- ROOT >= 6.0 (optional, for additional `.C` macro analysis)
+| Component | Requirement | Used by |
+|-----------|-------------|---------|
+| gfortran >= 10 | compile UrQMD | `make` |
+| Python >= 3.8: `numpy`, `matplotlib` | Option A plots | `plot_observables.py` |
+| Python >= 3.8: `h5py` | Option C ML dataset | `build_dataset.py` |
+| ROOT >= 6.0 (`root_env`) | Option B ROOT analysis | `urqmd2root.C`, `plot_observables.C` |
+| GNU Parallel | parallel job launch | `run_parallel.sh` (optional, falls back to bash) |
 
 ## References
 
