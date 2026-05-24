@@ -40,50 +40,53 @@ def _derived(particles):
     return particles
 
 
-def read_events(filepath, max_events=None):
+def iter_events(filepath, max_events=None):
     """
-    Lee un archivo .f14 o .f15 y devuelve una lista de eventos.
-    Cada evento es un dict con arrays numpy de las 23 columnas + pT, eta, phi.
-    Incluye 'b' (parámetro de impacto del evento).
+    Generator: yields one event dict at a time from a .f14 file.
+    Only one event lives in RAM at a time — use this for large datasets.
+
+    Each yielded dict contains numpy arrays for all 19 columns plus
+    derived quantities pT, P, eta, phi, and scalar 'b'.
 
     Parameters
     ----------
-    filepath : str | Path
-    max_events : int | None — límite de eventos a leer (None = todos)
+    filepath   : str | Path
+    max_events : int | None — stop after this many events (None = all)
 
-    Returns
-    -------
-    list[dict]
+    Yields
+    ------
+    dict
     """
     filepath = Path(filepath)
-    events = []
     current_particles = {c: [] for c in _COLS}
     b_val = np.nan
     in_event = False
+    n_yielded = 0
 
     with open(filepath) as f:
         for line in f:
             c = line[0] if line else ""
 
-            if c == "U":   # cabecera principal (empieza nuevo evento)
+            if c == "U":   # new event header
                 if in_event and current_particles["E"]:
                     p = {k: np.array(v, dtype=np.float64)
                          for k, v in current_particles.items()}
                     p["b"] = b_val
-                    events.append(_derived(p))
-                    if max_events and len(events) >= max_events:
-                        return events
+                    yield _derived(p)
+                    n_yielded += 1
+                    if max_events and n_yielded >= max_events:
+                        return
                 current_particles = {c: [] for c in _COLS}
                 b_val = np.nan
                 in_event = True
 
-            elif c == "i":  # línea con parámetro de impacto
+            elif c == "i":
                 try:
                     b_val = float(line[37:42])
                 except (ValueError, IndexError):
                     pass
 
-            elif c in ("p", "t", "e", "o"):  # cabeceras, saltar
+            elif c in ("p", "t", "e", "o"):
                 continue
 
             elif in_event and line.strip() and c not in ("#", "\n"):
@@ -95,33 +98,55 @@ def read_events(filepath, max_events=None):
                     except ValueError:
                         pass
 
-    # último evento
+    # last event
     if in_event and current_particles["E"]:
-        p = {k: np.array(v, dtype=np.float64)
-             for k, v in current_particles.items()}
-        p["b"] = b_val
-        events.append(_derived(p))
+        if not max_events or n_yielded < max_events:
+            p = {k: np.array(v, dtype=np.float64)
+                 for k, v in current_particles.items()}
+            p["b"] = b_val
+            yield _derived(p)
 
-    return events
 
-
-def read_all(output_dir, pattern="*/urqmd.f14", max_events=None):
+def read_events(filepath, max_events=None):
     """
-    Lee todos los archivos .f14 en output_dir y concatena los eventos.
-    Usa f14 porque con cto 41 1 ese archivo siempre se genera;
-    con tim T T (un solo snapshot) equivale al estado final.
+    Load all events from a .f14 file into a list.
+    Convenience wrapper around iter_events — loads everything into RAM.
+    For large files use iter_events or iter_all directly.
+    """
+    return list(iter_events(filepath, max_events=max_events))
+
+
+def iter_all(output_dir, pattern="*/urqmd.f14", max_events=None):
+    """
+    Generator: yields events one at a time across all f14 files in output_dir.
+    Memory usage is constant regardless of the number of files or events.
     """
     files = sorted(Path(output_dir).glob(pattern))
     if not files:
         files = sorted(Path(output_dir).glob("*/urqmd.f14"))
     if not files:
-        raise FileNotFoundError(f"No se encontraron archivos f14/f15 en {output_dir}")
+        raise FileNotFoundError(f"No f14 files found in {output_dir}")
 
-    all_events = []
+    n_yielded = 0
     for fp in files:
-        evs = read_events(fp, max_events=max_events)
-        all_events.extend(evs)
-        if max_events and len(all_events) >= max_events:
-            break
+        for ev in iter_events(fp):
+            yield ev
+            n_yielded += 1
+            if max_events and n_yielded >= max_events:
+                return
+
+
+def read_all(output_dir, pattern="*/urqmd.f14", max_events=None):
+    """
+    Load all events from output_dir into a list.
+    Uses iter_all internally. For large datasets use iter_all directly.
+    """
+    files = sorted(Path(output_dir).glob(pattern))
+    if not files:
+        files = sorted(Path(output_dir).glob("*/urqmd.f14"))
+    if not files:
+        raise FileNotFoundError(f"No f14 files found in {output_dir}")
+
+    all_events = list(iter_all(output_dir, pattern=pattern, max_events=max_events))
     print(f"Leídos {len(all_events)} eventos de {len(files)} archivos")
     return all_events
