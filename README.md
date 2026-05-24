@@ -190,10 +190,12 @@ python3 analysis/plot_observables.py output/Bi_11GeV_0-20 --pid 101 --charged-on
 | `participants` | `ncl > 0` | Nucleones que tuvieron al menos una colisión |
 | `spectators` | `ncl == 0` | Nucleones que no colisionaron |
 
-Plots are saved to `output/<RUN_TAG>/plots/`:
+Plots are saved to `output/<RUN_TAG>/plots/`. The filename includes the active filters:
 
 ```
-pt_Bi_11GeV_0-20.png
+pt_Bi_11GeV_0-20.png                          # all particles
+pt_Bi_11GeV_0-20_participants.png             # --select participants
+pt_Bi_11GeV_0-20_spectators_cargadas.png      # --select spectators --charged-only
 eta_Bi_11GeV_0-20.png
 phi_Bi_11GeV_0-20.png
 ```
