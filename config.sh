@@ -40,7 +40,7 @@ OUTPUTS="f14"
 
 # --- Statistics ---
 NEV=10            # events per job
-N_JOBS=4         # independent jobs  ->  total = N_JOBS x NEV
+N_JOBS=10         # independent jobs  ->  total = N_JOBS x NEV
 N_WORKERS=4      # parallel processes (set <= available cores)
 
 SEED_BASE=12345  # base seed; job i uses SEED_BASE + i
@@ -55,9 +55,8 @@ TIM_STEP=200
 # normal mode -> Au, Bi (nmax=40000)
 # lhc mode    -> Pb at LHC energies (nmax=100000)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-URQMD_DIR="${SCRIPT_DIR}/urqmd-3.4"
+URQMD_DIR="${SCRIPT_DIR}/urqmd-4.0"
 URQMD_BIN="${URQMD_DIR}/urqmd.x86_64"
-# URQMD_BIN="${URQMD_DIR}/urqmd.x86_64.lhc"   # use for Pb+Pb LHC
 
 # --- Run tag (names the output directories) ---
 RUN_TAG="${SPECIES}_${ECM}GeV_${CENT_LABEL}"

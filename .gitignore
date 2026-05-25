@@ -10,6 +10,8 @@ plots/
 __pycache__/
 *.pyc
 
-# UrQMD source tree and build artifacts (use patches/Linux.mk.patch to build)
+# UrQMD source trees and build artifacts (extract tar and compile locally)
 urqmd-3.4.tar
 urqmd-3.4/
+urqmd-4.0.tar.gz
+urqmd-4.0/
