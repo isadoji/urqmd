@@ -1,6 +1,6 @@
 # UrQMD — event generator for heavy-ion collisions at NICA energies
 
-Generates Bi+Bi events at 11 GeV with UrQMD 3.4 and computes
+Generates Bi+Bi events at 11 GeV with UrQMD 4.0 and computes
 observables (pT, eta, phi) using local parallel processing.
 The repository is self-contained: clone it, compile, and run.
 
@@ -8,11 +8,13 @@ The repository is self-contained: clone it, compile, and run.
 
 ## Build UrQMD
 
-The UrQMD 3.4 source tar (204 MB) is not stored in this repository.
+### UrQMD 4.0 (default)
+
+The UrQMD 4.0 source tar is not stored in this repository.
 Download it from the official site and place it at the repo root:
 
 ```
-http://urqmd.org/download/urqmd-3.4.tar
+https://itp.uni-frankfurt.de/~bleicher/urqmddownload/urqmd-4.0.tar.gz
 ```
 
 Then build:
@@ -21,27 +23,58 @@ Then build:
 git clone https://github.com/isadoji/urqmd.git
 cd urqmd
 
-# 1. Place urqmd-3.4.tar here, then extract
+# 1. Place urqmd-4.0.tar.gz here, then extract
+tar xzf urqmd-4.0.tar.gz          # creates urqmd-4.0/
+
+# 2. Compile (UrQMD 4.0 mk/Linux.mk already includes gfortran >= 10 flags)
+cd urqmd-4.0 && make
+# -> urqmd-4.0/urqmd.x86_64
+
+cd ..
+```
+
+`config.sh` automatically picks up `urqmd-4.0/urqmd.x86_64` relative
+to the repository root — no path editing required after cloning.
+
+> **Note:** UrQMD 4.0 does not support the `lhc` compilation mode (the target was
+> removed in this release). For Pb+Pb at LHC energies, use UrQMD 3.4 (see below).
+
+---
+
+### UrQMD 3.4 (alternative)
+
+If you need the 3.4 release (e.g., for LHC-mode or reproducibility):
+
+```
+http://urqmd.org/download/urqmd-3.4.tar
+```
+
+```bash
+# 1. Extract
 tar xf urqmd-3.4.tar          # creates urqmd-3.4/
 
-# 2. Apply the gfortran patch (fixes compilation with gfortran >= 10)
+# 2. Apply the gfortran >= 10 patch
 patch urqmd-3.4/mk/Linux.mk patches/Linux.mk.patch
 
 # 3. Compile (normal mode — Bi+Bi, Au+Au)
 cd urqmd-3.4 && make
 # -> urqmd-3.4/urqmd.x86_64
 
-# 4. Compile LHC mode (Pb+Pb at LHC energies, nmax=100000)
+# 4. Compile LHC mode (Pb+Pb, nmax=100000)
 make lhc
 # -> urqmd-3.4/urqmd.x86_64.lhc
 
 cd ..
 ```
 
-`config.sh` automatically picks up `urqmd-3.4/urqmd.x86_64` relative
-to the repository root — no path editing required after cloning.
+To switch `config.sh` to 3.4, change the `URQMD_DIR` line:
 
-### Patch: `patches/Linux.mk.patch`
+```bash
+URQMD_DIR="${SCRIPT_DIR}/urqmd-3.4"
+# URQMD_BIN="${URQMD_DIR}/urqmd.x86_64.lhc"   # use for Pb+Pb LHC
+```
+
+#### Patch: `patches/Linux.mk.patch`
 
 The original `GNUmakefile` does not compile with gfortran >= 10.
 `patches/Linux.mk.patch` adds the required flags to `mk/Linux.mk`:
@@ -76,8 +109,8 @@ urqmd/
 │   ├── urqmd2root.C           # converts .f14 → ROOT TTree (compatible with CalcBfield)
 │   └── plot_observables.C     # pT, eta, phi histograms via ROOT
 ├── patches/
-│   └── Linux.mk.patch         # gfortran >= 10 fix for urqmd-3.4/mk/Linux.mk
-└── urqmd-3.4/                 # NOT in git — extract tar and apply patch
+│   └── Linux.mk.patch         # gfortran >= 10 fix for urqmd-3.4/mk/Linux.mk (not needed for 4.0)
+└── urqmd-4.0/                 # NOT in git — extract tar and compile
 └── output/                    # created at runtime (.gitignored)
     └── Bi_11GeV_0-20/
         └── run_0000/
@@ -123,7 +156,7 @@ N_WORKERS=4   # parallel processes (set <= available cores)
 | Au+Au  | 200 GeV   | 197, 79   | 197, 79   | `normal`    |
 | Pb+Pb  | 5020 GeV  | 208, 82   | 208, 82   | `lhc`       |
 
-For LHC mode set `URQMD_BIN="${URQMD_DIR}/urqmd.x86_64.lhc"` in `config.sh`.
+LHC mode (Pb+Pb at 5020 GeV) requires UrQMD 3.4 — see the alternative build section above.
 
 ### Impact parameter for Bi+Bi (b_max = 14.2 fm)
 
